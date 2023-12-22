@@ -1,6 +1,11 @@
 package transaction;
 
 import java.rmi.*;
+import java.io.FileInputStream;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.util.Properties;
 
 /**
  * Transaction Manager for the Distributed Travel Reservation System.
@@ -12,22 +17,41 @@ public class TransactionManagerImpl
         extends java.rmi.server.UnicastRemoteObject
         implements TransactionManager {
 
+    static Registry _rmiRegistry = null;
+
     public static void main(String args[]) {
         System.setSecurityManager(new RMISecurityManager());
 
-        String rmiPort = System.getProperty("rmiPort");
-        if (rmiPort == null) {
-            rmiPort = "";
-        } else if (!rmiPort.equals("")) {
-            rmiPort = "//:" + rmiPort + "/";
+        Properties prop = new Properties();
+        try {
+            prop.load(new FileInputStream("conf/ddb.conf"));
+        } catch (Exception e1) {
+            e1.printStackTrace();
+            return;
+        }
+
+        String rmiPort = prop.getProperty("tm.port");
+
+        try {
+            _rmiRegistry = LocateRegistry.createRegistry(Integer
+                    .parseInt(rmiPort));
+        } catch (RemoteException e2) {
+            e2.printStackTrace();
+            return;
+        }
+
+        String rmiName = TransactionManager.RMIName;
+        if (rmiName == null || rmiName.equals("")) {
+            System.err.println("No RMI name given");
+            System.exit(1);
         }
 
         try {
             TransactionManagerImpl obj = new TransactionManagerImpl();
-            Naming.rebind(rmiPort + TransactionManager.RMIName, obj);
-            System.out.println("TM bound");
+            _rmiRegistry.bind(rmiName, obj);
+            System.out.println(rmiName + " bound");
         } catch (Exception e) {
-            System.err.println("TM not bound:" + e);
+            System.err.println(rmiName + " not bound:" + e);
             System.exit(1);
         }
     }
