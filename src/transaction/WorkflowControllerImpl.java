@@ -271,13 +271,6 @@ public class WorkflowControllerImpl
     // TECHNICAL/TESTING INTERFACE
     public boolean reconnect()
             throws RemoteException {
-        String rmiPort = System.getProperty("rmiPort");
-        if (rmiPort == null) {
-            rmiPort = "";
-        } else if (!rmiPort.equals("")) {
-            rmiPort = "//:" + rmiPort + "/";
-        }
-
         Properties prop = new Properties();
         try {
             prop.load(new FileInputStream("conf/ddb.conf"));
