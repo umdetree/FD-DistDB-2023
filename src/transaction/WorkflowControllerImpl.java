@@ -8,9 +8,12 @@ import java.rmi.registry.Registry;
 import java.io.FileInputStream;
 import java.util.Properties;
 
+import lockmgr.DeadlockException;
+import transaction.data.*;
+
 /**
  * Workflow Controller for the Distributed Travel Reservation System.
- * 
+ *
  * Description: toy implementation of the WC. In the real
  * implementation, the WC should forward calls to either RM or TM,
  * instead of doing the things itself.
@@ -19,6 +22,8 @@ import java.util.Properties;
 public class WorkflowControllerImpl
         extends java.rmi.server.UnicastRemoteObject
         implements WorkflowController {
+    static public String FLIGHTS = "FLIGHTS", HOTELS = "HOTELS", CARS ="CARS", CUSTOMERS ="CUSTOMERS",
+            RESERVATIONS = "RESERVATIONS";
 
     protected int flightcounter, flightprice, carscounter, carsprice, roomscounter, roomsprice;
     protected int xidCounter;
@@ -109,8 +114,14 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        flightcounter += numSeats;
-        flightprice = price;
+        Flight flight = new Flight(flightNum,numSeats,price,numSeats);
+        try {
+            rmFlights.insert(xid,FLIGHTS,flight);
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
+//        flightcounter += numSeats;
+//        flightprice = price;
         return true;
     }
 
@@ -118,8 +129,13 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        flightcounter = 0;
-        flightprice = 0;
+        try {
+            rmFlights.delete(xid,"FLIGHTS","flightNum",flightNum);
+        } catch (DeadlockException | InvalidIndexException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
+//        flightcounter += numSeats;
+//        flightprice = price;
         return true;
     }
 
@@ -178,7 +194,13 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        return flightcounter;
+        try {
+            Flight flight = (Flight) rmFlights.query(xid,FLIGHTS,flightNum);
+            return flight.getNumAvail();
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
+
     }
 
     public int queryFlightPrice(int xid, String flightNum)
@@ -228,8 +250,20 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        flightcounter--;
-        return true;
+        try {
+            Flight flight = (Flight) rmFlights.query(xid,FLIGHTS,flightNum);
+            int num = flight.getNumAvail();
+            if ( num > 0) {
+                num -= 1;
+                flight.setNumAvail(num);
+                rmFlights.update(xid,FLIGHTS,flight.getFlightNum(),flight);
+                return true;
+            } else {
+                return false;
+            }
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
     }
 
     public boolean reserveCar(int xid, String custName, String location)
