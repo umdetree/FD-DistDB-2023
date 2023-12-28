@@ -5,6 +5,9 @@ import java.io.FileInputStream;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -19,6 +22,13 @@ public class TransactionManagerImpl
 
     static Registry _rmiRegistry = null;
 
+    class TranscationData {
+        public int xid;
+        public ArrayList<ResourceManager> rmList;
+    }
+
+    private HashMap<Integer,TranscationData> transcationDataMap;
+
     public static void main(String args[]) {
         System.setSecurityManager(new RMISecurityManager());
 
@@ -31,7 +41,7 @@ public class TransactionManagerImpl
         }
 
         String rmiPort = prop.getProperty("tm.port");
-
+        System.out.println(rmiPort);
         try {
             _rmiRegistry = LocateRegistry.createRegistry(Integer
                     .parseInt(rmiPort));
@@ -49,6 +59,7 @@ public class TransactionManagerImpl
         try {
             TransactionManagerImpl obj = new TransactionManagerImpl();
             _rmiRegistry.bind(rmiName, obj);
+
             System.out.println(rmiName + " bound");
         } catch (Exception e) {
             System.err.println(rmiName + " not bound:" + e);
@@ -60,9 +71,33 @@ public class TransactionManagerImpl
     }
 
     public void enlist(int xid, ResourceManager rm) throws RemoteException {
+        TranscationData data = transcationDataMap.get(xid);
+        if (data == null) {
+            data = new TranscationData();
+            data.xid = xid;
+            data.rmList = new ArrayList<ResourceManager>();
+            System.out.println("Create xid " + xid);
+            transcationDataMap.put(xid, data);
+        }
+        data.rmList.add(rm);
+        System.out.println("Enlist RM " + rm.getID() + " to xid " + xid);
+    }
+
+    public void commit(int xid) throws RemoteException, InvalidTransactionException {
+        TranscationData data = transcationDataMap.get(xid);
+        if (data == null) {
+            System.out.println("No such xid " + xid);
+            return;
+        } else {
+            for (ResourceManager rm : data.rmList) {
+                rm.commit(xid);
+            }
+            transcationDataMap.remove(xid);
+        }
     }
 
     public TransactionManagerImpl() throws RemoteException {
+        this.transcationDataMap = new HashMap<>();
     }
 
     public boolean dieNow()

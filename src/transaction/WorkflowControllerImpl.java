@@ -75,7 +75,6 @@ public class WorkflowControllerImpl
 
     public WorkflowControllerImpl() throws RemoteException {
         flightcounter = 0;
-        flightprice = 0;
         carscounter = 0;
         carsprice = 0;
         roomscounter = 0;
@@ -100,6 +99,8 @@ public class WorkflowControllerImpl
             TransactionAbortedException,
             InvalidTransactionException {
         System.out.println("Committing");
+        tm.commit(xid);
+        System.out.println("Committed");
         return true;
     }
 
@@ -132,10 +133,9 @@ public class WorkflowControllerImpl
                 rmFlights.update(xid,FLIGHTS,flightNum,flight_o);
             }
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return false;
         }
-//        flightcounter += numSeats;
-//        flightprice = price;
         return true;
     }
 
@@ -146,7 +146,10 @@ public class WorkflowControllerImpl
         // todo: not finished ,as no reservation check
         try {
             rmFlights.delete(xid,FLIGHTS,"flightNum",flightNum);
-        } catch (DeadlockException | InvalidIndexException e) {
+        } catch (DeadlockException e) {
+            errorHandleDeadlock(xid, e);
+            return false;
+        } catch (InvalidIndexException e) {
             throw new InvalidTransactionException(xid,e.getMessage());
         }
         return true;
@@ -172,7 +175,8 @@ public class WorkflowControllerImpl
                 hotel_o.setPrice(price);
             }
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return false;
         }
         return true;
     }
@@ -186,7 +190,10 @@ public class WorkflowControllerImpl
             if (delNum <= 0) {
                 return false;
             }
-        } catch (DeadlockException | InvalidIndexException e) {
+        } catch (DeadlockException e) {
+            errorHandleDeadlock(xid, e);
+            return false;
+        } catch (InvalidIndexException e) {
             throw new InvalidTransactionException(xid,e.getMessage());
         }
         return true;
@@ -212,7 +219,8 @@ public class WorkflowControllerImpl
                 car_o.setPrice(price);
             }
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return false;
         }
         return true;
     }
@@ -226,7 +234,10 @@ public class WorkflowControllerImpl
             if (delNum <= 0) {
                 return false;
             }
-        } catch (DeadlockException | InvalidIndexException e) {
+        } catch (DeadlockException e) {
+            errorHandleDeadlock(xid, e);
+            return false;
+        } catch (InvalidIndexException e) {
             throw new InvalidTransactionException(xid,e.getMessage());
         }
         return true;
@@ -241,7 +252,8 @@ public class WorkflowControllerImpl
             rmCustomers.insert(xid,CUSTOMERS,customer);
             return true;
         }  catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return false;
         }
     }
 
@@ -254,7 +266,10 @@ public class WorkflowControllerImpl
             if (delNum <= 0) {
                 return false;
             }
-        } catch (DeadlockException | InvalidIndexException e) {
+        } catch (DeadlockException e) {
+            errorHandleDeadlock(xid, e);
+            return false;
+        } catch (InvalidIndexException e) {
             throw new InvalidTransactionException(xid,e.getMessage());
         }
         return true;
@@ -276,7 +291,8 @@ public class WorkflowControllerImpl
             }
             return flight.getNumAvail();
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return -1;
         }
     }
 
@@ -294,7 +310,8 @@ public class WorkflowControllerImpl
             }
             return flight.getNumAvail();
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return -1;
         }
     }
 
@@ -312,7 +329,8 @@ public class WorkflowControllerImpl
             }
             return hotel.getNumAvail();
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return -1;
         }
     }
 
@@ -330,7 +348,8 @@ public class WorkflowControllerImpl
             }
             return hotel.getPrice();
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return -1;
         }
     }
 
@@ -348,7 +367,8 @@ public class WorkflowControllerImpl
             }
             return car.getNumAvail();
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return -1;
         }
     }
 
@@ -364,9 +384,11 @@ public class WorkflowControllerImpl
             if (car == null) {
                 return -1;
             }
+
             return car.getPrice();
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return -1;
         }
     }
 
@@ -392,7 +414,8 @@ public class WorkflowControllerImpl
             rmCustomers.insert(xid,RESERVATIONS,reservation);
             return true;
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return false;
         }
     }
 
@@ -408,9 +431,11 @@ public class WorkflowControllerImpl
             rmCars.update(xid,CARS,car.getLocation(),car);
             Reservation reservation = new Reservation(custName, Reservation.RESERVATION_TYPE_CAR,location);
             rmCustomers.insert(xid,RESERVATIONS,reservation);
+
             return true;
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid, e);
+            return false;
         }
     }
 
@@ -426,10 +451,14 @@ public class WorkflowControllerImpl
             rmRooms.update(xid,HOTELS,hotel.getLocation(),hotel);
             Reservation reservation = new Reservation(custName, Reservation.RESERVATION_TYPE_HOTEL,location);
             rmCustomers.insert(xid,RESERVATIONS,reservation);
+
             return true;
         } catch (DeadlockException e) {
-            throw new InvalidTransactionException(xid,e.getMessage());
+            errorHandleDeadlock(xid,e);
+            return false;
         }
+
+
     }
 
     private String getLookupStr (Properties prop, String rmiName) {
@@ -579,5 +608,12 @@ public class WorkflowControllerImpl
     public boolean dieRMBeforeAbort(String who)
             throws RemoteException {
         return true;
+    }
+
+    private void errorHandleDeadlock(int xid, DeadlockException e)
+            throws TransactionAbortedException, InvalidTransactionException, RemoteException
+    {
+        abort(xid);
+        throw new TransactionAbortedException(xid,e.getMessage());
     }
 }
