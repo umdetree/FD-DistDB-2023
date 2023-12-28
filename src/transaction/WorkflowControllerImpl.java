@@ -110,13 +110,27 @@ public class WorkflowControllerImpl
     }
 
     // ADMINISTRATIVE INTERFACE
+
     public boolean addFlight(int xid, String flightNum, int numSeats, int price)
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
         Flight flight = new Flight(flightNum,numSeats,price,numSeats);
+        if (!flight.isVaild()){
+            return false;
+        }
         try {
-            rmFlights.insert(xid,FLIGHTS,flight);
+            boolean success = rmFlights.insert(xid,FLIGHTS,flight);
+            if (!success) {
+                Flight flight_o = (Flight) rmFlights.query(xid,FLIGHTS,flightNum);
+                if (flight_o == null){
+                    return false;
+                }
+                flight_o.setNumSeats(flight_o.getNumSeats() + numSeats);
+                flight_o.setNumAvail(flight_o.getNumAvail() + numSeats);
+                flight_o.setPrice(price);
+                rmFlights.update(xid,FLIGHTS,flightNum,flight_o);
+            }
         } catch (DeadlockException e) {
             throw new InvalidTransactionException(xid,e.getMessage());
         }
@@ -129,13 +143,12 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
+        // todo: not finished ,as no reservation check
         try {
-            rmFlights.delete(xid,"FLIGHTS","flightNum",flightNum);
+            rmFlights.delete(xid,FLIGHTS,"flightNum",flightNum);
         } catch (DeadlockException | InvalidIndexException e) {
             throw new InvalidTransactionException(xid,e.getMessage());
         }
-//        flightcounter += numSeats;
-//        flightprice = price;
         return true;
     }
 
@@ -143,8 +156,24 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        roomscounter += numRooms;
-        roomsprice = price;
+        Hotel hotel = new Hotel(location,numRooms,price,numRooms);
+        if (!hotel.isVaild()){
+            return false;
+        }
+        try {
+            boolean success = rmRooms.insert(xid,HOTELS,hotel);
+            if (!success) {
+                Hotel hotel_o = (Hotel) rmRooms.query(xid,HOTELS,location);
+                if (hotel_o == null){
+                    return false;
+                }
+                hotel_o.setNumRooms(hotel_o.getNumRooms() + numRooms);
+                hotel_o.setNumAvail(hotel_o.getNumAvail() + numRooms);
+                hotel_o.setPrice(price);
+            }
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
         return true;
     }
 
@@ -152,8 +181,14 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        roomscounter = 0;
-        roomsprice = 0;
+        try {
+            int delNum = rmRooms.delete(xid,HOTELS,"location",location);
+            if (delNum <= 0) {
+                return false;
+            }
+        } catch (DeadlockException | InvalidIndexException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
         return true;
     }
 
@@ -161,8 +196,24 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        carscounter += numCars;
-        carsprice = price;
+        Car car = new Car(location,numCars,price,numCars);
+        if (!car.isVaild()){
+            return false;
+        }
+        try {
+            boolean success = rmCars.insert(xid,CARS,car);
+            if (!success) {
+                Car car_o = (Car) rmCars.query(xid,CARS,location);
+                if (car_o == null){
+                    return false;
+                }
+                car_o.setNumCars(car_o.getNumCars() + numCars);
+                car_o.setNumAvail(car_o.getNumAvail() + numCars);
+                car_o.setPrice(price);
+            }
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
         return true;
     }
 
@@ -170,8 +221,14 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        carscounter = 0;
-        carsprice = 0;
+        try {
+            int delNum = rmCars.delete(xid,CARS,"location",location);
+            if (delNum <= 0) {
+                return false;
+            }
+        } catch (DeadlockException | InvalidIndexException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
         return true;
     }
 
@@ -179,13 +236,27 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        return true;
+        Customer customer = new Customer(custName);
+        try {
+            rmCustomers.insert(xid,CUSTOMERS,customer);
+            return true;
+        }  catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
     }
 
     public boolean deleteCustomer(int xid, String custName)
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
+        try {
+            int delNum = rmCars.delete(xid,CARS,"location",custName);
+            if (delNum <= 0) {
+                return false;
+            }
+        } catch (DeadlockException | InvalidIndexException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
         return true;
     }
 
@@ -194,48 +265,109 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
+        if (flightNum == null || flightNum.isEmpty()) {
+            return -1;
+        }
         try {
+
             Flight flight = (Flight) rmFlights.query(xid,FLIGHTS,flightNum);
+            if (flight == null) {
+                return -1;
+            }
             return flight.getNumAvail();
         } catch (DeadlockException e) {
             throw new InvalidTransactionException(xid,e.getMessage());
         }
-
     }
 
     public int queryFlightPrice(int xid, String flightNum)
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        return flightprice;
+        if (flightNum == null || flightNum.isEmpty()) {
+            return -1;
+        }
+        try {
+            Flight flight = (Flight) rmFlights.query(xid,FLIGHTS,flightNum);
+            if (flight == null) {
+                return -1;
+            }
+            return flight.getNumAvail();
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
     }
 
     public int queryRooms(int xid, String location)
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        return roomscounter;
+        if (location == null || location.isEmpty()) {
+            return -1;
+        }
+        try {
+            Hotel hotel = (Hotel) rmRooms.query(xid,HOTELS,location);
+            if (hotel == null) {
+                return -1;
+            }
+            return hotel.getNumAvail();
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
     }
 
     public int queryRoomsPrice(int xid, String location)
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        return roomsprice;
+        if (location == null || location.isEmpty()) {
+            return -1;
+        }
+        try {
+            Hotel hotel = (Hotel) rmRooms.query(xid,HOTELS,location);
+            if (hotel == null) {
+                return -1;
+            }
+            return hotel.getPrice();
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
     }
 
     public int queryCars(int xid, String location)
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        return carscounter;
+        if (location == null || location.isEmpty()) {
+            return -1;
+        }
+        try {
+            Car car = (Car) rmCars.query(xid,CARS,location);
+            if (car == null) {
+                return -1;
+            }
+            return car.getNumAvail();
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
     }
 
     public int queryCarsPrice(int xid, String location)
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        return carsprice;
+        if (location == null || location.isEmpty()) {
+            return -1;
+        }
+        try {
+            Car car = (Car) rmCars.query(xid,CARS,location);
+            if (car == null) {
+                return -1;
+            }
+            return car.getPrice();
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
     }
 
     public int queryCustomerBill(int xid, String custName)
@@ -252,15 +384,13 @@ public class WorkflowControllerImpl
             InvalidTransactionException {
         try {
             Flight flight = (Flight) rmFlights.query(xid,FLIGHTS,flightNum);
-            int num = flight.getNumAvail();
-            if ( num > 0) {
-                num -= 1;
-                flight.setNumAvail(num);
-                rmFlights.update(xid,FLIGHTS,flight.getFlightNum(),flight);
-                return true;
-            } else {
-                return false;
-            }
+            if (flight == null) return false;
+            flight.setNumAvail(flight.getNumAvail() - 1);
+            if (!flight.isVaild()) return false;
+            rmFlights.update(xid,FLIGHTS,flight.getFlightNum(),flight);
+            Reservation reservation = new Reservation(custName, Reservation.RESERVATION_TYPE_FLIGHT,flightNum);
+            rmCustomers.insert(xid,RESERVATIONS,reservation);
+            return true;
         } catch (DeadlockException e) {
             throw new InvalidTransactionException(xid,e.getMessage());
         }
@@ -270,16 +400,36 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        carscounter--;
-        return true;
+        try {
+            Car car = (Car) rmCars.query(xid,CARS,location);
+            if (car == null) return false;
+            car.setNumAvail(car.getNumAvail() - 1);
+            if (!car.isVaild()) return false;
+            rmCars.update(xid,CARS,car.getLocation(),car);
+            Reservation reservation = new Reservation(custName, Reservation.RESERVATION_TYPE_CAR,location);
+            rmCustomers.insert(xid,RESERVATIONS,reservation);
+            return true;
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
     }
 
     public boolean reserveRoom(int xid, String custName, String location)
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        roomscounter--;
-        return true;
+        try {
+            Hotel hotel = (Hotel) rmRooms.query(xid,HOTELS,location);
+            if (hotel == null) return false;
+            hotel.setNumAvail(hotel.getNumAvail() - 1);
+            if (!hotel.isVaild()) return false;
+            rmRooms.update(xid,HOTELS,hotel.getLocation(),hotel);
+            Reservation reservation = new Reservation(custName, Reservation.RESERVATION_TYPE_HOTEL,location);
+            rmCustomers.insert(xid,RESERVATIONS,reservation);
+            return true;
+        } catch (DeadlockException e) {
+            throw new InvalidTransactionException(xid,e.getMessage());
+        }
     }
 
     private String getLookupStr (Properties prop, String rmiName) {

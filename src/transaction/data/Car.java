@@ -1,43 +1,44 @@
 
 package transaction.data;
 
-import java.io.Serializable;
 import transaction.InvalidIndexException;
 import transaction.ResourceItem;
 
-public class Flight implements ResourceItem, Serializable {
-    public static final String INDEX_Fli = "flightNum";
-    protected String flightNum;
+import java.io.Serializable;
+
+public class Car implements ResourceItem, Serializable {
+    public static final String INDEX_Car = "location";
+    protected String location;
     protected int price;
-    protected int numSeats;
+    protected int numCars;
     protected int numAvail;
     protected boolean isdeleted = false;
 
-    public Flight(String flightNum, int price, int numSeats, int numAvail) {
-        this.flightNum = flightNum;
+    public Car(String location, int price, int numCars, int numAvail) {
+        this.location = location;
         this.price = price;
-        this.numSeats = numSeats;
+        this.numCars = numCars;
         this.numAvail = numAvail;
     }
 
     public String[] getColumnNames() {
-        return new String[]{"flightNum", "price", "numSeats", "numAvail"};
+        return new String[]{"location", "price", "numCars", "numAvail"};
     }
 
     public String[] getColumnValues() {
-        return new String[]{this.flightNum, "" + this.price, "" + this.numSeats, "" + this.numAvail};
+        return new String[]{this.location, "" + this.price, "" + this.numCars, "" + this.numAvail};
     }
 
     public Object getIndex(String indexName) throws InvalidIndexException {
-        if (indexName.equals(INDEX_Fli)) {
-            return this.flightNum;
+        if (indexName.equals(INDEX_Car)) {
+            return this.location;
         } else {
             throw new InvalidIndexException(indexName);
         }
     }
 
     public Object getKey() {
-        return this.flightNum;
+        return this.location;
     }
 
     public boolean isDeleted() {
@@ -49,13 +50,13 @@ public class Flight implements ResourceItem, Serializable {
     }
 
     public Object clone() {
-        Flight o = new Flight(this.flightNum, this.price, this.numSeats, this.numAvail);
+        Car o = new Car(this.location, this.price, this.numCars, this.numAvail);
         o.isdeleted = this.isdeleted;
         return o;
     }
 
-    public String getFlightNum() {
-        return this.flightNum;
+    public String getLocation() {
+        return this.location;
     }
 
     public int getNumAvail() {
@@ -66,19 +67,23 @@ public class Flight implements ResourceItem, Serializable {
         this.numAvail = numAvail;
     }
 
-    public int getNumSeats() {
-        return this.numSeats;
+    public int getNumCars() {
+        return numCars;
     }
 
-    public void setNumSeats(int numSeats) {
-        this.numSeats = numSeats;
+    public void setNumCars(int numCars) {
+        this.numCars = numCars;
     }
 
     public void setPrice(int price) {
         this.price = price;
     }
 
+    public int getPrice() {
+        return price;
+    }
+
     public boolean isVaild() {
-        return numSeats>= 0 && price >= 0 && flightNum!= null && !flightNum.isEmpty();
+        return numCars >= 0 && price >= 0 && location!= null && !location.isEmpty();
     }
 }

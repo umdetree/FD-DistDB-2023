@@ -1,43 +1,44 @@
 
 package transaction.data;
 
-import java.io.Serializable;
 import transaction.InvalidIndexException;
 import transaction.ResourceItem;
 
-public class Flight implements ResourceItem, Serializable {
-    public static final String INDEX_Fli = "flightNum";
-    protected String flightNum;
+import java.io.Serializable;
+
+public class Hotel implements ResourceItem, Serializable {
+    public static final String INDEX_Hol = "location";
+    protected String location;
     protected int price;
-    protected int numSeats;
+    protected int numRooms;
     protected int numAvail;
     protected boolean isdeleted = false;
 
-    public Flight(String flightNum, int price, int numSeats, int numAvail) {
-        this.flightNum = flightNum;
+    public Hotel(String location, int price, int numRooms, int numAvail) {
+        this.location = location;
         this.price = price;
-        this.numSeats = numSeats;
+        this.numRooms = numRooms;
         this.numAvail = numAvail;
     }
 
     public String[] getColumnNames() {
-        return new String[]{"flightNum", "price", "numSeats", "numAvail"};
+        return new String[]{"location", "price", "numRooms", "numAvail"};
     }
 
     public String[] getColumnValues() {
-        return new String[]{this.flightNum, "" + this.price, "" + this.numSeats, "" + this.numAvail};
+        return new String[]{this.location, "" + this.price, "" + this.numRooms, "" + this.numAvail};
     }
 
     public Object getIndex(String indexName) throws InvalidIndexException {
-        if (indexName.equals(INDEX_Fli)) {
-            return this.flightNum;
+        if (indexName.equals(INDEX_Hol)) {
+            return this.location;
         } else {
             throw new InvalidIndexException(indexName);
         }
     }
 
     public Object getKey() {
-        return this.flightNum;
+        return this.location;
     }
 
     public boolean isDeleted() {
@@ -49,13 +50,13 @@ public class Flight implements ResourceItem, Serializable {
     }
 
     public Object clone() {
-        Flight o = new Flight(this.flightNum, this.price, this.numSeats, this.numAvail);
+        Hotel o = new Hotel(this.location, this.price, this.numRooms, this.numAvail);
         o.isdeleted = this.isdeleted;
         return o;
     }
 
-    public String getFlightNum() {
-        return this.flightNum;
+    public String getLocation() {
+        return this.location;
     }
 
     public int getNumAvail() {
@@ -66,19 +67,24 @@ public class Flight implements ResourceItem, Serializable {
         this.numAvail = numAvail;
     }
 
-    public int getNumSeats() {
-        return this.numSeats;
+    public int getNumRooms() {
+        return this.numRooms;
     }
 
-    public void setNumSeats(int numSeats) {
-        this.numSeats = numSeats;
+    public void setNumRooms(int numRooms) {
+        this.numRooms = numRooms;
     }
 
     public void setPrice(int price) {
         this.price = price;
     }
 
+    public int getPrice() {
+        return this.price;
+    }
+
+
     public boolean isVaild() {
-        return numSeats>= 0 && price >= 0 && flightNum!= null && !flightNum.isEmpty();
+    	return this.numRooms >= 0 && this.price >= 0 && location!= null && !location.isEmpty();
     }
 }
