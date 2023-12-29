@@ -7,7 +7,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Properties;
 
 /**
@@ -19,12 +19,13 @@ import java.util.Properties;
 public class TransactionManagerImpl
         extends java.rmi.server.UnicastRemoteObject
         implements TransactionManager {
+    protected final static String SAVE_FILE_PATH = "data/tm_txList.log";
 
     static Registry _rmiRegistry = null;
 
     class TranscationData {
         public int xid;
-        public ArrayList<ResourceManager> rmList;
+        public HashSet<ResourceManager> rmList;
     }
 
     private HashMap<Integer,TranscationData> transcationDataMap;
@@ -75,7 +76,7 @@ public class TransactionManagerImpl
         if (data == null) {
             data = new TranscationData();
             data.xid = xid;
-            data.rmList = new ArrayList<ResourceManager>();
+            data.rmList = new HashSet<ResourceManager>();
             System.out.println("Create xid " + xid);
             transcationDataMap.put(xid, data);
         }
@@ -90,6 +91,7 @@ public class TransactionManagerImpl
             return;
         } else {
             for (ResourceManager rm : data.rmList) {
+                System.out.println("committing " + xid + " " + rm.getID());
                 rm.commit(xid);
             }
             transcationDataMap.remove(xid);

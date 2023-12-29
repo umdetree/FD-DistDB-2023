@@ -229,6 +229,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
                     oin.close();
             } catch (IOException e1) {
             }
+            System.out.println("load table " + file.getPath());
         }
     }
 
@@ -248,6 +249,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
                     oout.close();
             } catch (IOException e1) {
             }
+            System.out.println("store table " + file.getPath());
         }
     }
 
@@ -599,12 +601,14 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
                     RMTable table = getTable(xtable.getTablename());
                     for (Iterator iter2 = xtable.keySet().iterator(); iter2.hasNext();) {
                         Object key = iter2.next();
+                        System.out.println("handle key " + key);
                         ResourceItem item = xtable.get(key);
                         if (item.isDeleted())
                             table.remove(item);
                         else
                             table.put(item);
                     }
+                    System.out.println("store table of key " + entry.getKey());
                     if (!storeTable(table, new File("data/" + entry.getKey())))
                         throw new RemoteException("Can't write table to disk");
                     new File("data/" + xid + "/" + entry.getKey()).delete();
@@ -619,6 +623,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
 
         synchronized (xids) {
             xids.remove(new Integer(xid));
+            System.out.println("now xids: " + xids);
         }
     }
 

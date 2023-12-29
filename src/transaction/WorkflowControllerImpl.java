@@ -98,9 +98,9 @@ public class WorkflowControllerImpl
             throws RemoteException,
             TransactionAbortedException,
             InvalidTransactionException {
-        System.out.println("Committing");
+        System.out.println("xid " + xid + " committing");
         tm.commit(xid);
-        System.out.println("Committed");
+        System.out.println("xid " + xid + " committed");
         return true;
     }
 
