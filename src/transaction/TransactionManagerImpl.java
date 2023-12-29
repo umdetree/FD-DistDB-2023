@@ -5,10 +5,10 @@ import java.io.FileInputStream;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Properties;
+import java.util.concurrent.atomic.*;
 
 /**
  * Transaction Manager for the Distributed Travel Reservation System.
@@ -19,16 +19,18 @@ import java.util.Properties;
 public class TransactionManagerImpl
         extends java.rmi.server.UnicastRemoteObject
         implements TransactionManager {
+    // for transaction ids persistance
     protected final static String SAVE_FILE_PATH = "data/tm_txList.log";
 
     static Registry _rmiRegistry = null;
+    private AtomicInteger transactionId = new AtomicInteger(0);
 
-    class TranscationData {
+    class TransationData {
         public int xid;
         public HashSet<ResourceManager> rmList;
     }
 
-    private HashMap<Integer,TranscationData> transcationDataMap;
+    private HashMap<Integer,TransationData> transationDataMap;
 
     public static void main(String args[]) {
         System.setSecurityManager(new RMISecurityManager());
@@ -71,21 +73,35 @@ public class TransactionManagerImpl
     public void ping() throws RemoteException {
     }
 
+    public int Start() {
+        synchronized (transationDataMap) {
+            int xid = transactionId.getAndIncrement();
+            if (transationDataMap.get(xid) != null) {
+                System.err.println("TM error: failed to start xid " + xid);
+                return -1;
+            }
+            TransationData txData = new TransationData();
+            // init empty resource manager list(set) for transaction xid
+            transationDataMap.put(xid, txData);
+            return xid;
+        }
+    }
+
     public void enlist(int xid, ResourceManager rm) throws RemoteException {
-        TranscationData data = transcationDataMap.get(xid);
+        TransationData data = transationDataMap.get(xid);
         if (data == null) {
-            data = new TranscationData();
+            data = new TransationData();
             data.xid = xid;
             data.rmList = new HashSet<ResourceManager>();
             System.out.println("Create xid " + xid);
-            transcationDataMap.put(xid, data);
+            transationDataMap.put(xid, data);
         }
         data.rmList.add(rm);
         System.out.println("Enlist RM " + rm.getID() + " to xid " + xid);
     }
 
     public void commit(int xid) throws RemoteException, InvalidTransactionException {
-        TranscationData data = transcationDataMap.get(xid);
+        TransationData data = transationDataMap.get(xid);
         if (data == null) {
             System.out.println("No such xid " + xid);
             return;
@@ -94,12 +110,12 @@ public class TransactionManagerImpl
                 System.out.println("committing " + xid + " " + rm.getID());
                 rm.commit(xid);
             }
-            transcationDataMap.remove(xid);
+            transationDataMap.remove(xid);
         }
     }
 
     public TransactionManagerImpl() throws RemoteException {
-        this.transcationDataMap = new HashMap<>();
+        this.transationDataMap = new HashMap<>();
     }
 
     public boolean dieNow()
