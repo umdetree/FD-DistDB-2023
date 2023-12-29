@@ -1,7 +1,13 @@
 package transaction;
 
 import java.rmi.*;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -19,18 +25,18 @@ import java.util.concurrent.atomic.*;
 public class TransactionManagerImpl
         extends java.rmi.server.UnicastRemoteObject
         implements TransactionManager {
-    // for transaction ids persistance
+    // for transaction ids persistence
     protected final static String SAVE_FILE_PATH = "data/tm_txList.log";
 
     static Registry _rmiRegistry = null;
     private AtomicInteger transactionId = new AtomicInteger(0);
 
-    class TransationData {
+    class TransactionData implements Serializable {
         public int xid;
         public HashSet<ResourceManager> rmList;
     }
 
-    private HashMap<Integer,TransationData> transationDataMap;
+    private HashMap<Integer,TransactionData> transactionDataMap;
 
     public static void main(String args[]) {
         System.setSecurityManager(new RMISecurityManager());
@@ -73,35 +79,80 @@ public class TransactionManagerImpl
     public void ping() throws RemoteException {
     }
 
+    // transaction lists persistence
+    public void storeState() {
+        File txMapFile = new File(SAVE_FILE_PATH);
+        txMapFile.getParentFile().mkdirs();
+        ObjectOutputStream oout = null;
+        try {
+            oout = new ObjectOutputStream(new FileOutputStream(txMapFile));
+            oout.writeObject(transactionDataMap);
+            oout.flush();
+            return;
+        } catch (Exception e) {
+            System.err.println("TM error: failed to store tx state");
+            return;
+        } finally {
+            try {
+                if (oout != null)
+                    oout.close();
+            } catch (IOException e1) {
+            }
+        }
+    }
+
+    public HashMap<Integer, TransactionData> loadState() {
+        File txMapFile = new File(SAVE_FILE_PATH);
+        ObjectInputStream oin = null;
+        try {
+            oin = new ObjectInputStream(new FileInputStream(txMapFile));
+            return (HashMap<Integer, TransactionData>) oin.readObject();
+        } catch (Exception e) {
+            System.err.println("TM error: failed to load tx state");
+            return null;
+        } finally {
+            try {
+                if (oin != null)
+                    oin.close();
+            } catch (IOException e1) {
+            }
+        }
+    }
+
+    // I think WC should use this to get xid
     public int Start() {
-        synchronized (transationDataMap) {
+        synchronized (transactionDataMap) {
             int xid = transactionId.getAndIncrement();
-            if (transationDataMap.get(xid) != null) {
+            if (transactionDataMap.get(xid) != null) {
                 System.err.println("TM error: failed to start xid " + xid);
                 return -1;
             }
-            TransationData txData = new TransationData();
+            TransactionData txData = new TransactionData();
             // init empty resource manager list(set) for transaction xid
-            transationDataMap.put(xid, txData);
+            transactionDataMap.put(xid, txData);
+            storeState();
             return xid;
         }
     }
 
     public void enlist(int xid, ResourceManager rm) throws RemoteException {
-        TransationData data = transationDataMap.get(xid);
+        TransactionData data = transactionDataMap.get(xid);
         if (data == null) {
-            data = new TransationData();
+            // do not new empty Transaction here, new in Start instead
+            // is data == null, throws new RemoteException()
+            data = new TransactionData();
             data.xid = xid;
             data.rmList = new HashSet<ResourceManager>();
             System.out.println("Create xid " + xid);
-            transationDataMap.put(xid, data);
+            transactionDataMap.put(xid, data);
         }
         data.rmList.add(rm);
+        storeState();
         System.out.println("Enlist RM " + rm.getID() + " to xid " + xid);
     }
 
     public void commit(int xid) throws RemoteException, InvalidTransactionException {
-        TransationData data = transationDataMap.get(xid);
+        TransactionData data = transactionDataMap.get(xid);
         if (data == null) {
             System.out.println("No such xid " + xid);
             return;
@@ -110,12 +161,18 @@ public class TransactionManagerImpl
                 System.out.println("committing " + xid + " " + rm.getID());
                 rm.commit(xid);
             }
-            transationDataMap.remove(xid);
+            transactionDataMap.remove(xid);
         }
     }
 
     public TransactionManagerImpl() throws RemoteException {
-        this.transationDataMap = new HashMap<>();
+        this.transactionDataMap = new HashMap<>();
+        HashMap<Integer, TransactionData> state = loadState();
+        if (state == null) {
+            return;
+        } else {
+            this.transactionDataMap = state;
+        }
     }
 
     public boolean dieNow()
