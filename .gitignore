@@ -4,6 +4,9 @@
 # Log file
 *.log
 
+!src/transaction/data/*.java
+src/transaction/data/*/
+
 # BlueJ files
 *.ctxt
 

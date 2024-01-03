@@ -625,6 +625,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
 
         synchronized (xids) {
             xids.remove(new Integer(xid));
+            storeTransactionLogs(xids);
             System.out.println("now xids: " + xids);
         }
     }
@@ -652,6 +653,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
 
         synchronized (xids) {
             xids.remove(new Integer(xid));
+            storeTransactionLogs(xids);
         }
     }
 

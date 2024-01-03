@@ -106,7 +106,10 @@ public class TransactionManagerImpl
         ObjectInputStream oin = null;
         try {
             oin = new ObjectInputStream(new FileInputStream(txMapFile));
-            return (HashMap<Integer, TransactionData>) oin.readObject();
+            System.out.println("loading state from disk");
+            HashMap<Integer, TransactionData> state = (HashMap<Integer, TransactionData>) oin.readObject();
+            System.out.println("state loaded from disk");
+            return state;
         } catch (Exception e) {
             System.err.println("TM error: failed to load tx state");
             return null;
@@ -164,6 +167,7 @@ public class TransactionManagerImpl
                 rm.commit(xid);
             }
             transactionDataMap.remove(xid);
+            storeState();
         }
     }
 
