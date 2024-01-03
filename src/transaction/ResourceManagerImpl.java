@@ -268,7 +268,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
             RMTable table = (RMTable) xidtables.get(tablename);
             if (table != null)
                 return table;
-            table = loadTable(new File(myPath + (xid == -1 ? "" : "" + xid + "/") + tablename));
+            table = loadTable(new File(myPath+"/" + (xid == -1 ? "" : "" + xid + "/") + tablename));
             if (table == null) {
                 if (xid == -1)
                     table = new RMTable(tablename, null, -1, lm);
