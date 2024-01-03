@@ -89,6 +89,67 @@ public class WorkflowControllerImpl
             sleep(1000);
             // would be better to sleep a while
         }
+
+        new Thread() {
+            public void run() {
+                while (true) {
+                    pingServices();
+
+                    if (!isConnected()) {
+                        try {
+                            reconnect();
+                            System.out.println("reconnect wc!");
+                        } catch (Exception e) {
+                            System.err.println("wc reconnect error: " + e);
+                        }
+
+                    }
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                    }
+
+                }
+            }
+        }.start();
+    }
+
+    private boolean isConnected() {
+        boolean res = rmCars != null && rmRooms != null && rmFlights != null && rmCustomers != null && tm != null;
+        return res;
+    }
+
+    private void pingServices() {
+        try {
+            tm.ping();
+        } catch (Exception e) {
+            System.out.println("cannnot ping tm");
+            tm = null;
+        }
+        try {
+            rmCars.ping();
+        } catch (Exception e) {
+            System.out.println("cannnot ping rmCars");
+            rmCars = null;
+        }
+        try {
+            rmCustomers.ping();
+        } catch (Exception e) {
+            System.out.println("cannnot ping rmCustomers");
+            rmCustomers = null;
+        }
+        try {
+            rmFlights.ping();
+        } catch (Exception e) {
+            System.out.println("cannnot ping rmFlights");
+            rmFlights = null;
+        }
+        try {
+            rmRooms.ping();
+        } catch (Exception e) {
+            System.out.println("cannnot ping rmRooms");
+            rmRooms = null;
+        }
     }
 
     // TRANSACTION INTERFACE
