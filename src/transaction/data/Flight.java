@@ -78,6 +78,9 @@ public class Flight implements ResourceItem, Serializable {
         this.price = price;
     }
 
+    public int getPrice() {
+        return this.price;
+    }
     public boolean isVaild() {
         return numSeats>= 0 && price >= 0 && flightNum!= null && !flightNum.isEmpty();
     }
