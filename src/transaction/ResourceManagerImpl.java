@@ -44,6 +44,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
     }
 
     protected String myRMIName = null; // Used to distinguish this RM from other
+    protected String myPath = null; // Used to distinguish this RM from other
 
     protected String dieTime;
 
@@ -60,6 +61,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
     protected HashSet xids = new HashSet();
 
     public ResourceManagerImpl(String rmiName) throws RemoteException {
+        myPath = "data/" + rmiName;
         myRMIName = rmiName;
         dieTime = "NoDie";
 
@@ -105,7 +107,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
         if (t_xids != null)
             xids = t_xids;
 
-        File dataDir = new File("data");
+        File dataDir = new File(myPath);
         if (!dataDir.exists()) {
             dataDir.mkdirs();
         }
@@ -266,7 +268,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
             RMTable table = (RMTable) xidtables.get(tablename);
             if (table != null)
                 return table;
-            table = loadTable(new File("data/" + (xid == -1 ? "" : "" + xid + "/") + tablename));
+            table = loadTable(new File(myPath + (xid == -1 ? "" : "" + xid + "/") + tablename));
             if (table == null) {
                 if (xid == -1)
                     table = new RMTable(tablename, null, -1, lm);
@@ -289,7 +291,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
     }
 
     protected HashSet loadTransactionLogs() {
-        File xidLog = new File("data/transactions.log");
+        File xidLog = new File(myPath+"/transactions.log");
         ObjectInputStream oin = null;
         try {
             oin = new ObjectInputStream(new FileInputStream(xidLog));
@@ -306,7 +308,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
     }
 
     protected boolean storeTransactionLogs(HashSet xids) {
-        File xidLog = new File("data/transactions.log");
+        File xidLog = new File(myPath+"/transactions.log");
         xidLog.getParentFile().mkdirs();
         xidLog.getParentFile().mkdirs();
         ObjectOutputStream oout = null;
@@ -357,7 +359,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
                 }
             }
             if (!result.isEmpty()) {
-                if (!storeTable(table, new File("data/" + xid + "/" + tablename))) {
+                if (!storeTable(table, new File(myPath+"/" + xid + "/" + tablename))) {
                     throw new RemoteException("System Error: Can't write table to disk!");
                 }
             }
@@ -387,7 +389,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
         ResourceItem item = table.get(key);
         if (item != null && !item.isDeleted()) {
             table.lock(key, LockManager.READ);
-            if (!storeTable(table, new File("data/" + xid + "/" + tablename))) {
+            if (!storeTable(table, new File(myPath+"/" + xid + "/" + tablename))) {
                 throw new RemoteException("System Error: Can't write table to disk!");
             }
             return item;
@@ -425,7 +427,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
                 }
             }
             if (!result.isEmpty()) {
-                if (!storeTable(table, new File("data/" + xid + "/" + tablename))) {
+                if (!storeTable(table, new File(myPath+"/" + xid + "/" + tablename))) {
                     throw new RemoteException("System Error: Can't write table to disk!");
                 }
             }
@@ -459,7 +461,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
         if (item != null && !item.isDeleted()) {
             table.lock(key, LockManager.WRITE);
             table.put(newItem);
-            if (!storeTable(table, new File("data/" + xid + "/" + tablename))) {
+            if (!storeTable(table, new File(myPath+"/" + xid + "/" + tablename))) {
                 throw new RemoteException("System Error: Can't write table to disk!");
             }
             return true;
@@ -493,7 +495,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
         }
         table.lock(newItem.getKey(), LockManager.WRITE);
         table.put(newItem);
-        if (!storeTable(table, new File("data/" + xid + "/" + tablename))) {
+        if (!storeTable(table, new File(myPath+"/" + xid + "/" + tablename))) {
             throw new RemoteException("System Error: Can't write table to disk!");
         }
         return true;
@@ -525,7 +527,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
             item = (ResourceItem) item.clone();
             item.delete();
             table.put(item);
-            if (!storeTable(table, new File("data/" + xid + "/" + tablename))) {
+            if (!storeTable(table, new File(myPath+"/" + xid + "/" + tablename))) {
                 throw new RemoteException("System Error: Can't write table to disk!");
             }
             return true;
@@ -567,7 +569,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
                 }
             }
             if (n > 0) {
-                if (!storeTable(table, new File("data/" + xid + "/" + tablename))) {
+                if (!storeTable(table, new File(myPath+"/" + xid + "/" + tablename))) {
                     throw new RemoteException("System Error: Can't write table to disk!");
                 }
             }
@@ -609,11 +611,11 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
                             table.put(item);
                     }
                     System.out.println("store table of key " + entry.getKey());
-                    if (!storeTable(table, new File("data/" + entry.getKey())))
+                    if (!storeTable(table, new File(myPath+"/" + entry.getKey())))
                         throw new RemoteException("Can't write table to disk");
-                    new File("data/" + xid + "/" + entry.getKey()).delete();
+                    new File(myPath+"/" + xid + "/" + entry.getKey()).delete();
                 }
-                new File("data/" + xid).delete();
+                new File(myPath+"/" + xid).delete();
                 tables.remove(new Integer(xid));
             }
         }
@@ -638,9 +640,9 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
             synchronized (xidtables) {
                 for (Iterator iter = xidtables.entrySet().iterator(); iter.hasNext();) {
                     Map.Entry entry = (Map.Entry) iter.next();
-                    new File("data/" + xid + "/" + entry.getKey()).delete();
+                    new File(myPath+"/" + xid + "/" + entry.getKey()).delete();
                 }
-                new File("data/" + xid).delete();
+                new File(myPath+"/" + xid).delete();
                 tables.remove(new Integer(xid));
             }
         }

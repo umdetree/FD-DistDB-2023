@@ -28,6 +28,7 @@ public class TransactionManagerImpl
     // for transaction ids persistence
     protected final static String SAVE_FILE_PATH = "data/tm_txList.log";
 
+
     static Registry _rmiRegistry = null;
     private AtomicInteger transactionId = new AtomicInteger(0);
 
@@ -74,6 +75,7 @@ public class TransactionManagerImpl
             System.err.println(rmiName + " not bound:" + e);
             System.exit(1);
         }
+
     }
 
     public void ping() throws RemoteException {
@@ -88,10 +90,8 @@ public class TransactionManagerImpl
             oout = new ObjectOutputStream(new FileOutputStream(txMapFile));
             oout.writeObject(transactionDataMap);
             oout.flush();
-            return;
         } catch (Exception e) {
             System.err.println("TM error: failed to store tx state");
-            return;
         } finally {
             try {
                 if (oout != null)
@@ -120,7 +120,7 @@ public class TransactionManagerImpl
     }
 
     // I think WC should use this to get xid
-    public int Start() {
+    public int startTransaction() throws RemoteException{
         synchronized (transactionDataMap) {
             int xid = transactionId.getAndIncrement();
             if (transactionDataMap.get(xid) != null) {
@@ -128,7 +128,10 @@ public class TransactionManagerImpl
                 return -1;
             }
             TransactionData txData = new TransactionData();
+            txData.xid = xid;
             // init empty resource manager list(set) for transaction xid
+            txData.rmList = new HashSet<ResourceManager>();
+            System.out.println("Create xid " + xid);
             transactionDataMap.put(xid, txData);
             storeState();
             return xid;
@@ -155,7 +158,6 @@ public class TransactionManagerImpl
         TransactionData data = transactionDataMap.get(xid);
         if (data == null) {
             System.out.println("No such xid " + xid);
-            return;
         } else {
             for (ResourceManager rm : data.rmList) {
                 System.out.println("committing " + xid + " " + rm.getID());
@@ -168,10 +170,16 @@ public class TransactionManagerImpl
     public TransactionManagerImpl() throws RemoteException {
         this.transactionDataMap = new HashMap<>();
         HashMap<Integer, TransactionData> state = loadState();
-        if (state == null) {
-            return;
-        } else {
+        if (state != null) {
             this.transactionDataMap = state;
+            int maxKey = Integer.MIN_VALUE;
+
+            for (int key : state.keySet()) {
+                if (key > maxKey) {
+                    maxKey = key;
+                }
+            }
+            transactionId.set(maxKey + 1);
         }
     }
 

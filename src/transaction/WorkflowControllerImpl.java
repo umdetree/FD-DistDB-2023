@@ -11,6 +11,8 @@ import java.util.Properties;
 import lockmgr.DeadlockException;
 import transaction.data.*;
 
+import static java.lang.Thread.sleep;
+
 /**
  * Workflow Controller for the Distributed Travel Reservation System.
  *
@@ -73,7 +75,7 @@ public class WorkflowControllerImpl
         }
     }
 
-    public WorkflowControllerImpl() throws RemoteException {
+    public WorkflowControllerImpl() throws RemoteException, InterruptedException {
         flightcounter = 0;
         carscounter = 0;
         carsprice = 0;
@@ -84,6 +86,7 @@ public class WorkflowControllerImpl
         xidCounter = 1;
 
         while (!reconnect()) {
+            sleep(1000);
             // would be better to sleep a while
         }
     }
@@ -91,7 +94,9 @@ public class WorkflowControllerImpl
     // TRANSACTION INTERFACE
     public int start()
             throws RemoteException {
-        return (xidCounter++);
+        int xid = tm.startTransaction();
+        System.out.println("xid " + xid + " started");
+        return xid;
     }
 
     public boolean commit(int xid)
@@ -493,7 +498,7 @@ public class WorkflowControllerImpl
         }
 
         try {
-            String q = null;
+            String q;
             q = this.getLookupStr(prop, ResourceManager.RMINameFlights);
             rmFlights = (ResourceManager) Naming.lookup(q);
             System.out.println("WC bound to RMFlights");
@@ -527,7 +532,7 @@ public class WorkflowControllerImpl
             System.err.println("Some RM cannot reconnect:" + e);
             return false;
         }
-
+        System.out.println("should not go here");
         return false;
     }
 
