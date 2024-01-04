@@ -182,7 +182,7 @@ public class TransactionManagerImpl
         }
         if (data == null) {
             System.out.println("No such xid " + xid);
-            throw new InvalidTransactionException(xid, RMIName);
+            throw new InvalidTransactionException(xid, "No such xid" + xid);
         }
 
         // prepare stage
@@ -237,6 +237,7 @@ public class TransactionManagerImpl
             }
             transactionDataMap.remove(xid);
             storeState();
+
         }
     }
 
@@ -261,6 +262,27 @@ public class TransactionManagerImpl
         System.exit(1);
         return true; // We won't ever get here since we exited above;
                      // but we still need it to please the compiler.
+    }
+
+    public void setDieTime(String time) throws RemoteException{
+        // TODO not finished
+        System.out.println("Not finished TM die time set to " + time);
+
+    }
+
+    public void abort(int xid) throws RemoteException, InvalidTransactionException {
+        TransactionData data = transactionDataMap.get(xid);
+        if (data == null) {
+            System.out.println("No such xid " + xid);
+            throw new InvalidTransactionException(xid, "No such xid " + xid);
+        } else {
+            for (ResourceManager rm : data.rmList) {
+                System.out.println("aborting " + xid + " " + rm.getID());
+                rm.abort(xid);
+            }
+            transactionDataMap.remove(xid);
+            storeState();
+        }
     }
 
 }
