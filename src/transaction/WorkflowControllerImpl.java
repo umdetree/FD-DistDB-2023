@@ -166,7 +166,12 @@ public class WorkflowControllerImpl
             TransactionAbortedException,
             InvalidTransactionException {
         System.out.println("xid " + xid + " committing");
-        tm.commit(xid);
+        try {
+            tm.commit(xid);
+        } catch (RemoteException e){ // tm loss
+            System.out.println("tm is loss");
+            throw new TransactionAbortedException(xid,"tm is dead");
+        }
         System.out.println("xid " + xid + " commit success");
         return true;
     }

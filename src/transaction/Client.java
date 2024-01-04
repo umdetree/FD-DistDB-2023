@@ -166,7 +166,7 @@ public class Client {
 
     }
     /*
-    open test: open other server
+    open test: open all needed server
 
      */
     private static void openTest() throws RemoteException, InvalidTransactionException, TransactionAbortedException {
@@ -218,6 +218,23 @@ public class Client {
         }).start();
 
     }
+    /*
+     Roubustness test1: start , close Custom RM before prepare, commit
+     */
+    private static boolean RoubustnessTest1(WorkflowController wc) throws RemoteException, InvalidTransactionException, TransactionAbortedException {
+        int xid = wc.start();
+        if (!wc.newCustomer(xid, "Bob")) {
+            System.err.println("Add customer failed");
+        }
+        wc.dieRMBeforePrepare("RMCustomer");
+        try {
+            wc.commit(xid);
+        } catch (TransactionAbortedException e) {
+            System.out.println("TransactionAbortedException happen");
+        }
+
+        return true;
+    }
     public static void main(String args[]) {
         try {
             openTest();
@@ -250,8 +267,8 @@ public class Client {
         }
 
         try {
-            CombineTestforReservation(wc);
-
+            // CombineTestforReservation(wc);
+            RoubustnessTest1(wc);
         } catch (Exception e) {
             System.err.println("Received exception:" + e);
             System.exit(1);
