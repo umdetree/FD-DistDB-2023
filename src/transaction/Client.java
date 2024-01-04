@@ -44,18 +44,16 @@ public class Client {
     */
     private static boolean test_initial(WorkflowController wc) throws RemoteException, InvalidTransactionException, TransactionAbortedException {
         int xid = wc.start();
-
+        System.out.println("Initial test "+xid);
         if (!wc.addFlight(xid, "996", 230, 125)) {
             System.err.println("Add flight failed");
         }
         if (!wc.addRooms(xid, "Shanghai", 500, 150)) {
             System.err.println("Add room failed");
         }
-
         if (!wc.addCars(xid, "Shanghai", 500, 150)) {
             System.err.println("Add car failed");
         }
-
         if (!wc.commit(xid)) {
             System.err.println("Commit failed");
         }
@@ -116,7 +114,7 @@ public class Client {
         if (!wc.commit(xid)) {
             System.err.println("Commit failed");
         } else {
-            System.out.println("Reservation success");
+            System.out.println("Reservation success" + user);
         }
         return true;
     }
@@ -302,32 +300,47 @@ public class Client {
         } else {
             System.out.println("Initial success");
         }
-        int xid1 = wc.start();
-        int xid2 = wc.start();
-        try {
-            if (!wc.reserveRoom(xid1, "Jason", "Shanghai")) {
-                System.err.println("Reserve room failed");
-                wc.abort(xid1);
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    reservationTest(wc,"Jason");
+                } catch (TransactionAbortedException e) {
+                    System.out.println("TransactionAbortedException happen");
+                    return;
+                } catch (RemoteException | InvalidTransactionException e) {
+                    throw new RuntimeException(e);
+                }
+                try {
+                    unreservationTest(wc,"Jason");
+                } catch (RemoteException | TransactionAbortedException | InvalidTransactionException e) {
+                    throw new RuntimeException(e);
+                }
             }
-            if (!wc.reserveRoom(xid2, "Jason", "Shanghai")) {
-                System.err.println("Reserve room failed");
-                wc.abort(xid2);
-            }
-        } catch (TransactionAbortedException e) {
-            System.out.println("TransactionAbortedException happen");
-            return true;
-        }
-        if (!wc.commit(xid1)) {
-            System.err.println("Commit failed");
-        } else {
-            System.out.println("Commit success");
-        }
-        if (!wc.commit(xid2)) {
-            System.err.println("Commit failed");
-        } else {
-            System.out.println("Commit success");
-        }
+        }).start();
 
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    reservationTest(wc,"Penjinbo");
+                } catch (TransactionAbortedException e) {
+                    System.out.println("TransactionAbortedException happen");
+                    return;
+                } catch (RemoteException | InvalidTransactionException e) {
+                    throw new RuntimeException(e);
+                }
+                try {
+                    unreservationTest(wc,"Penjinbo");
+                } catch (RemoteException | TransactionAbortedException | InvalidTransactionException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }).start();
+        test_clear(wc);
         return true;
     }
     public static void main(String args[]) {
@@ -362,11 +375,11 @@ public class Client {
         }
 
         try {
-            CombineTestforReservation(wc);
+            // CombineTestforReservation(wc);
             // RoubustnessTest1(wc);
             // RebornTest(wc);
             //RoubustnessTest2(wc);
-            AgeTest(wc);
+            // AgeTest(wc);
             DeadlockTest(wc);
         } catch (Exception e) {
             System.err.println("Received exception:" + e);
