@@ -20,6 +20,7 @@ public interface TransactionManager extends Remote {
 
     public void enlist(int xid, ResourceManager rm) throws RemoteException;
 
+    public void setDieTime(String time) throws RemoteException;
     public int startTransaction() throws RemoteException;
     public void commit(int xid) throws RemoteException, InvalidTransactionException;
     /** The RMI name a TransactionManager binds to. */

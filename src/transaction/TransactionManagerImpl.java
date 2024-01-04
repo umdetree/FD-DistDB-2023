@@ -194,4 +194,10 @@ public class TransactionManagerImpl
                      // but we still need it to please the compiler.
     }
 
+    public void setDieTime(String time) throws RemoteException{
+        // TODO not finished
+        System.out.println("Not finished TM die time set to " + time);
+
+    }
+
 }

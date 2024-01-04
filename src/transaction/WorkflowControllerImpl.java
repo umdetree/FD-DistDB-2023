@@ -717,37 +717,78 @@ public class WorkflowControllerImpl
 
     public boolean dieRMAfterEnlist(String who)
             throws RemoteException {
+        ResourceManager whoRm = selectWho(who);
+        if (whoRm == null) {
+            return false;
+        }
+        whoRm.setDieTime("AfterEnlist");
         return true;
     }
 
     public boolean dieRMBeforePrepare(String who)
             throws RemoteException {
+        ResourceManager whoRm = selectWho(who);
+        if (whoRm == null) {
+            return false;
+        }
+        whoRm.setDieTime("BeforePrepare");
         return true;
     }
 
     public boolean dieRMAfterPrepare(String who)
             throws RemoteException {
+        ResourceManager whoRm = selectWho(who);
+        if (whoRm == null) {
+            return false;
+        }
+        whoRm.setDieTime("AfterPrepare");
         return true;
     }
 
     public boolean dieTMBeforeCommit()
             throws RemoteException {
+        tm.setDieTime("BeforeCommit");
         return true;
     }
 
     public boolean dieTMAfterCommit()
             throws RemoteException {
+        tm.setDieTime("AfterCommit");
         return true;
     }
 
     public boolean dieRMBeforeCommit(String who)
             throws RemoteException {
+        ResourceManager whoRm = selectWho(who);
+        if (whoRm == null) {
+            return false;
+        }
+        whoRm.setDieTime("BeforeCommit");
         return true;
     }
 
     public boolean dieRMBeforeAbort(String who)
             throws RemoteException {
+        ResourceManager whoRm = selectWho(who);
+        if (whoRm == null) {
+            return false;
+        }
+        whoRm.setDieTime("BeforeAbort");
         return true;
+    }
+
+    private ResourceManager selectWho(String who) {
+        if (who.equals(ResourceManager.RMINameFlights)) {
+            return rmFlights;
+        } else if (who.equals(ResourceManager.RMINameRooms)) {
+            return rmRooms;
+        } else if (who.equals(ResourceManager.RMINameCars)) {
+            return rmCars;
+        } else if (who.equals(ResourceManager.RMINameCustomers)) {
+            return rmCustomers;
+        } else {
+            return null;
+        }
     }
 
     private void errorHandleDeadlock(int xid, DeadlockException e)
