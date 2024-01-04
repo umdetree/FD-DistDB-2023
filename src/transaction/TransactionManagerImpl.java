@@ -161,6 +161,7 @@ public class TransactionManagerImpl
         TransactionData data = transactionDataMap.get(xid);
         if (data == null) {
             System.out.println("No such xid " + xid);
+            throw new InvalidTransactionException(xid, "No such xid " + xid);
         } else {
             for (ResourceManager rm : data.rmList) {
                 System.out.println("committing " + xid + " " + rm.getID());
@@ -168,6 +169,7 @@ public class TransactionManagerImpl
             }
             transactionDataMap.remove(xid);
             storeState();
+
         }
     }
 
@@ -198,6 +200,21 @@ public class TransactionManagerImpl
         // TODO not finished
         System.out.println("Not finished TM die time set to " + time);
 
+    }
+
+    public void abort(int xid) throws RemoteException, InvalidTransactionException {
+        TransactionData data = transactionDataMap.get(xid);
+        if (data == null) {
+            System.out.println("No such xid " + xid);
+            throw new InvalidTransactionException(xid, "No such xid " + xid);
+        } else {
+            for (ResourceManager rm : data.rmList) {
+                System.out.println("aborting " + xid + " " + rm.getID());
+                rm.abort(xid);
+            }
+            transactionDataMap.remove(xid);
+            storeState();
+        }
     }
 
 }

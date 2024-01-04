@@ -19,7 +19,7 @@ public interface TransactionManager extends Remote {
     public void ping() throws RemoteException;
 
     public void enlist(int xid, ResourceManager rm) throws RemoteException;
-
+    public void abort(int xid) throws RemoteException, InvalidTransactionException;
     public void setDieTime(String time) throws RemoteException;
     public int startTransaction() throws RemoteException;
     public void commit(int xid) throws RemoteException, InvalidTransactionException;
