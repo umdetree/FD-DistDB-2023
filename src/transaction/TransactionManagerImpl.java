@@ -155,14 +155,8 @@ public class TransactionManagerImpl
                 // The unprepared RM may have not been aborted by TM due to net issue.
                 // Such RM still has the xid that should be removed by TM.
                 // So ignore such enlist, it is not valid.
-
-                // data = new TransactionData();
-                // data.xid = xid;
-                // data.rmList = new HashSet<ResourceManager>();
                 System.out.println("warning: unknown xid " + xid);
                 return false;
-                // System.out.println("Create xid " + xid);
-                // transactionDataMap.put(xid, data);
             }
             data.rmList.add(rm);
             storeState();
@@ -172,9 +166,9 @@ public class TransactionManagerImpl
     }
 
     public void commit(int xid) throws RemoteException, InvalidTransactionException {
-        try {
-            sleep(5000);
-        } catch (Exception e) {}
+        // try {
+        //     sleep(5000);
+        // } catch (Exception e) {}
 
         TransactionData data = null;
         synchronized (transactionDataMap) {
