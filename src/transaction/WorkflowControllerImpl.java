@@ -39,6 +39,7 @@ public class WorkflowControllerImpl
 
     static Registry _rmiRegistry = null;
 
+    static int MAXIMIZERETRYTIMES = 3;
     public static void main(String args[]) {
         System.setSecurityManager(new RMISecurityManager());
 
@@ -91,28 +92,26 @@ public class WorkflowControllerImpl
             // would be better to sleep a while
         }
 
-        new Thread() {
-            public void run() {
-                while (true) {
-                    pingServices();
+        new Thread(() -> {
+            while (true) {
+                pingServices();
 
-                    if (!isConnected()) {
-                        try {
-                            reconnect();
-                            System.out.println("reconnect wc!");
-                        } catch (Exception e) {
-                            System.err.println("wc reconnect error: " + e);
-                        }
-
-                    }
+                if (!isConnected()) {
                     try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
+                        reconnect();
+                        System.out.println("reconnect wc!");
+                    } catch (Exception e) {
+                        System.err.println("wc reconnect error: " + e);
                     }
 
                 }
+                try {
+                    sleep(1000);
+                } catch (InterruptedException e) {
+                }
+
             }
-        }.start();
+        }).start();
     }
 
     private boolean isConnected() {
@@ -166,14 +165,25 @@ public class WorkflowControllerImpl
             TransactionAbortedException,
             InvalidTransactionException {
         System.out.println("xid " + xid + " committing");
-        try {
-            tm.commit(xid);
-        } catch (RemoteException e){ // tm loss
-            System.out.println("tm is loss");
-            throw new TransactionAbortedException(xid,"tm is dead");
+        int i;
+        for ( i = 0; i < MAXIMIZERETRYTIMES; i++) {
+            try {
+                tm.commit(xid);
+                System.out.println("xid " + xid + " commit success");
+                return true;
+            } catch (RemoteException | NullPointerException e) {
+                System.out.println("try to commit again");
+                if (i == MAXIMIZERETRYTIMES - 1) {
+                    throw new TransactionAbortedException(xid,"tm is dead");
+                }
+                try {
+                    sleep(1000);
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
+            }
         }
-        System.out.println("xid " + xid + " commit success");
-        return true;
+        return false;
     }
 
     public void abort(int xid)
@@ -792,6 +802,7 @@ public class WorkflowControllerImpl
         } else if (who.equals(ResourceManager.RMINameCustomers)) {
             return rmCustomers;
         } else {
+            System.out.println("Unknown RM:" + who);
             return null;
         }
     }

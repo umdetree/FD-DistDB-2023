@@ -177,7 +177,7 @@ public class Client {
             }
         }).start();
         try {
-            Thread.sleep(10000);
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -226,21 +226,50 @@ public class Client {
         if (!wc.newCustomer(xid, "Bob")) {
             System.err.println("Add customer failed");
         }
-        wc.dieRMBeforePrepare("RMCustomer");
+        if (!wc.dieRMBeforePrepare("RMCustomers")) {
+            System.err.println("dieRMBeforePrepare failed");
+        }
         try {
             wc.commit(xid);
         } catch (TransactionAbortedException e) {
             System.out.println("TransactionAbortedException happen");
+            return true;
         }
+        throw new RuntimeException("RoubustnessTest1 failed");
+    }
 
+    /*
+     Reborn test: start , close TM, restart TM, commit
+     */
+    private static boolean RebornTest(WorkflowController wc) throws RemoteException, InvalidTransactionException, TransactionAbortedException {
+        int xid = wc.start();
+        if (!wc.newCustomer(xid, "Kobe Bryant")) {
+            System.err.println("Add customer failed");
+        }
+        if (!wc.dieNow("TM")) {
+            System.err.println("dieNow failed");
+        }
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        new Thread(new Runnable() {
+            public void run() {
+                TransactionManagerImpl.main(null);
+            }
+        }).start();
+        if (!wc.commit(xid)) {
+            System.err.println("Commit failed");
+        }
         return true;
     }
     public static void main(String args[]) {
-        try {
-            openTest();
-        } catch (InvalidTransactionException | RemoteException | TransactionAbortedException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            openTest();
+//        } catch (InvalidTransactionException | RemoteException | TransactionAbortedException e) {
+//            throw new RuntimeException(e);
+//        }
 
 
         Properties prop = new Properties();
@@ -268,7 +297,8 @@ public class Client {
 
         try {
             // CombineTestforReservation(wc);
-            RoubustnessTest1(wc);
+            // RoubustnessTest1(wc);
+            RebornTest(wc);
         } catch (Exception e) {
             System.err.println("Received exception:" + e);
             System.exit(1);

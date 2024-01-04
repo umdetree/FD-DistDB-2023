@@ -184,13 +184,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
     }
 
     public boolean dieNow() throws RemoteException {
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            // e.printStackTrace();
-        }
-        this.dead = true;
-        // System.exit(1);
+        System.exit(1);
         return true; // We won't ever get here since we exited above;
         // but we still need it to please the compiler.
     }
