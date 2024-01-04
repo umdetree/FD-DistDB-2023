@@ -264,6 +264,31 @@ public class Client {
         }
         return true;
     }
+
+    /*
+     Roubustness test2: start , close TM before commit, commit
+     */
+    private static boolean RoubustnessTest2(WorkflowController wc) throws RemoteException, InvalidTransactionException, TransactionAbortedException {
+        int xid = wc.start();
+        if (!wc.newCustomer(xid, "Bob")) {
+            System.err.println("Add customer failed");
+        }
+        if (!wc.dieTMBeforeCommit()) {
+            System.err.println("dieTMBeforeCommit failed");
+        }
+        try {
+            wc.commit(xid);
+        } catch (TransactionAbortedException e) {
+            System.out.println("TransactionAbortedException happen");
+            return true;
+        }
+        throw new RuntimeException("RoubustnessTest2 failed");
+    }
+
+    private static boolean AgeTest(WorkflowController wc) throws RemoteException, InvalidTransactionException, TransactionAbortedException {
+        int xid = wc.start();
+        return true;
+    }
     public static void main(String args[]) {
 //        try {
 //            openTest();
@@ -298,7 +323,9 @@ public class Client {
         try {
             // CombineTestforReservation(wc);
             // RoubustnessTest1(wc);
-            RebornTest(wc);
+            // RebornTest(wc);
+            //RoubustnessTest2(wc);
+            AgeTest(wc);
         } catch (Exception e) {
             System.err.println("Received exception:" + e);
             System.exit(1);

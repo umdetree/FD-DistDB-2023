@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Properties;
@@ -33,11 +34,14 @@ public class TransactionManagerImpl
     public String dieTime = "NoDie";
 
     static Registry _rmiRegistry = null;
+    static int MAXAGE = 10;
     private AtomicInteger transactionId = new AtomicInteger(0);
 
     class TransactionData implements Serializable {
         public int xid;
         public HashSet<ResourceManager> rmList;
+
+        public int age;
     }
 
     private HashMap<Integer,TransactionData> transactionDataMap;
@@ -79,6 +83,29 @@ public class TransactionManagerImpl
             System.exit(1);
         }
 
+        // start garbage collection thread
+
+
+    }
+
+    private void gc() {
+        ArrayList<Integer> toRemove = new ArrayList<Integer>();
+        synchronized (transactionDataMap) {
+            for (TransactionData data : transactionDataMap.values()) {
+                data.age++;
+                if (data.age > MAXAGE) {
+                    toRemove.add(data.xid);
+                }
+            }
+        }
+        for (int xid : toRemove) {
+            try {
+                System.out.println("GC: aborting " + xid);
+                this.abort(xid);
+            } catch (Exception e) {
+                System.out.println("GC: abort err: " + e);
+            }
+        }
     }
 
     public void ping() throws RemoteException {
@@ -137,6 +164,7 @@ public class TransactionManagerImpl
             txData.xid = xid;
             // init empty resource manager list(set) for transaction xid
             txData.rmList = new HashSet<ResourceManager>();
+            txData.age = 0;
             System.out.println("Create xid " + xid);
             transactionDataMap.put(xid, txData);
             storeState();
@@ -148,13 +176,6 @@ public class TransactionManagerImpl
         synchronized (transactionDataMap) {
             TransactionData data = transactionDataMap.get(xid);
             if (data == null) {
-                // Do not new empty Transaction here, new in Start instead.
-                // If data == null, throws new RemoteException().
-                // It is possible when an RM was not prepare and then reconnects.
-                // Since if any RM is not prepared, all RMs should abort.
-                // The unprepared RM may have not been aborted by TM due to net issue.
-                // Such RM still has the xid that should be removed by TM.
-                // So ignore such enlist, it is not valid.
                 System.out.println("warning: unknown xid " + xid);
                 return false;
             }
@@ -245,6 +266,20 @@ public class TransactionManagerImpl
             }
             transactionId.set(maxKey + 1);
         }
+        // start garbage collection thread
+        Thread gcThread = new Thread(new Runnable() {
+            public void run() {
+                while (true) {
+                    try {
+                        sleep(1000);
+                    } catch (Exception e) {
+                    }
+                    gc();
+                }
+            }
+        });
+        gcThread.start();
+
     }
 
     public boolean dieNow()
