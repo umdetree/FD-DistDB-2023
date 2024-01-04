@@ -34,7 +34,7 @@ public class TransactionManagerImpl
     public String dieTime = "NoDie";
 
     static Registry _rmiRegistry = null;
-    static int MAXAGE = 10;
+    static int MAXAGE = 100;
     private AtomicInteger transactionId = new AtomicInteger(0);
 
     class TransactionData implements Serializable {
@@ -89,15 +89,18 @@ public class TransactionManagerImpl
     }
 
     private void gc() {
-        ArrayList<Integer> toRemove = new ArrayList<Integer>();
+        HashSet<Integer> toRemove = new HashSet<Integer>();
         synchronized (transactionDataMap) {
             for (TransactionData data : transactionDataMap.values()) {
                 data.age++;
+                System.out.println("GC: xid " + data.xid + " age " + data.age);
                 if (data.age > MAXAGE) {
                     toRemove.add(data.xid);
                 }
             }
+            storeState();
         }
+
         for (int xid : toRemove) {
             try {
                 System.out.println("GC: aborting " + xid);
@@ -106,6 +109,7 @@ public class TransactionManagerImpl
                 System.out.println("GC: abort err: " + e);
             }
         }
+
     }
 
     public void ping() throws RemoteException {

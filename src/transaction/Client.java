@@ -64,7 +64,7 @@ public class Client {
     */
     private static boolean test_clear(WorkflowController wc) throws RemoteException, InvalidTransactionException, TransactionAbortedException {
         int xid = wc.start();
-
+        System.out.println("Clear test "+xid);
         if (!wc.deleteFlight(xid, "996")) {
             System.err.println("Delete flight failed");
         } else {
@@ -94,6 +94,7 @@ public class Client {
     private static boolean reservationTest(WorkflowController wc,String user) throws RemoteException, InvalidTransactionException, TransactionAbortedException {
         int xid = wc.start();
         int bill = -1;
+
         if (!wc.newCustomer(xid, user)) {
             System.err.println("Add customer failed");
         }
@@ -114,7 +115,7 @@ public class Client {
         if (!wc.commit(xid)) {
             System.err.println("Commit failed");
         } else {
-            System.out.println("Reservation success" + user);
+            System.out.println("Reservation success " + user);
         }
         return true;
     }
@@ -134,6 +135,7 @@ public class Client {
         if (!wc.commit(xid)) {
             System.err.println("Commit failed");
         }
+        System.out.println("Unreservation success " + user);
         return true;
     }
     /*
@@ -312,7 +314,10 @@ public class Client {
                 }
                 try {
                     unreservationTest(wc,"Jason");
-                } catch (RemoteException | TransactionAbortedException | InvalidTransactionException e) {
+                } catch (TransactionAbortedException e) {
+                    System.out.println("TransactionAbortedException happen");
+                    return;
+                } catch (RemoteException | InvalidTransactionException e) {
                     throw new RuntimeException(e);
                 }
             }
@@ -335,12 +340,20 @@ public class Client {
                 }
                 try {
                     unreservationTest(wc,"Penjinbo");
-                } catch (RemoteException | TransactionAbortedException | InvalidTransactionException e) {
+                } catch (TransactionAbortedException e) {
+                    System.out.println("TransactionAbortedException happen");
+                    return;
+                } catch (RemoteException | InvalidTransactionException e) {
                     throw new RuntimeException(e);
                 }
             }
         }).start();
-        test_clear(wc);
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        // test_clear(wc);
         return true;
     }
     public static void main(String args[]) {
