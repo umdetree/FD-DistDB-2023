@@ -1,6 +1,9 @@
 package transaction;
 
 import java.rmi.*;
+
+import static java.lang.Thread.sleep;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -141,30 +144,96 @@ public class TransactionManagerImpl
         }
     }
 
-    public void enlist(int xid, ResourceManager rm) throws RemoteException {
-        TransactionData data = transactionDataMap.get(xid);
-        if (data == null) {
-            // do not new empty Transaction here, new in Start instead
-            // is data == null, throws new RemoteException()
-            data = new TransactionData();
-            data.xid = xid;
-            data.rmList = new HashSet<ResourceManager>();
-            System.out.println("Create xid " + xid);
-            transactionDataMap.put(xid, data);
+    public boolean enlist(int xid, ResourceManager rm) throws RemoteException {
+        synchronized (transactionDataMap) {
+            TransactionData data = transactionDataMap.get(xid);
+            if (data == null) {
+                // Do not new empty Transaction here, new in Start instead.
+                // If data == null, throws new RemoteException().
+                // It is possible when an RM was not prepare and then reconnects.
+                // Since if any RM is not prepared, all RMs should abort.
+                // The unprepared RM may have not been aborted by TM due to net issue.
+                // Such RM still has the xid that should be removed by TM.
+                // So ignore such enlist, it is not valid.
+
+                // data = new TransactionData();
+                // data.xid = xid;
+                // data.rmList = new HashSet<ResourceManager>();
+                System.out.println("warning: unknown xid " + xid);
+                return false;
+                // System.out.println("Create xid " + xid);
+                // transactionDataMap.put(xid, data);
+            }
+            data.rmList.add(rm);
+            storeState();
+            System.out.println("Enlist RM " + rm.getID() + " to xid " + xid);
+            return true;
         }
-        data.rmList.add(rm);
-        storeState();
-        System.out.println("Enlist RM " + rm.getID() + " to xid " + xid);
     }
 
     public void commit(int xid) throws RemoteException, InvalidTransactionException {
-        TransactionData data = transactionDataMap.get(xid);
+        try {
+            sleep(5000);
+        } catch (Exception e) {}
+
+        TransactionData data = null;
+        synchronized (transactionDataMap) {
+            data = transactionDataMap.get(xid);
+        }
         if (data == null) {
             System.out.println("No such xid " + xid);
-        } else {
+            throw new InvalidTransactionException(xid, RMIName);
+        }
+
+        // prepare stage
+        // if all RMs are prepared, commit all
+        // else abort all
+        synchronized (transactionDataMap) {
+            try {
+                for (ResourceManager rm : data.rmList) {
+                    if (!rm.prepare(xid)) {
+                        throw new InvalidTransactionException(xid, rm.getID());
+                    }
+                    System.out.println("prepared " + xid + " " + rm.getID());
+                }
+            } catch (Exception e) {
+                // someone is not prepared, abort all
+                System.out.println("not prepared " + e);
+                for (ResourceManager rm : data.rmList) {
+                    try {
+                        System.out.println("aborting " + xid + " " + rm.getID());
+                        rm.abort(xid);
+                        System.out.println("aborted " + xid + " " + rm.getID());
+                    } catch (Exception e1) {
+                        System.out.println("abort err: " + e1);
+                    }
+                }
+                System.out.println("hi");
+                transactionDataMap.remove(xid);
+                throw new InvalidTransactionException(xid, "not prepared");
+            }
+        }
+        System.out.println("all prepared " + xid);
+
+        // commit stage
+        // at this stage, we should retry every failed commit
+        synchronized (transactionDataMap) {
             for (ResourceManager rm : data.rmList) {
-                System.out.println("committing " + xid + " " + rm.getID());
-                rm.commit(xid);
+                boolean committed = false;
+                while (!committed) {
+                    try {
+                        System.out.println("committing " + xid + " " + rm.getID());
+                        rm.commit(xid);
+                        System.out.println("committed " + xid + " " + rm.getID());
+                        committed = true;
+                    } catch (Exception e) {
+                        // retry
+                        try {
+                            sleep(500);
+                        } catch (Exception e1) {
+                        }
+                    }
+                }
             }
             transactionDataMap.remove(xid);
             storeState();
@@ -176,7 +245,7 @@ public class TransactionManagerImpl
         HashMap<Integer, TransactionData> state = loadState();
         if (state != null) {
             this.transactionDataMap = state;
-            int maxKey = Integer.MIN_VALUE;
+            int maxKey = -1;
 
             for (int key : state.keySet()) {
                 if (key > maxKey) {

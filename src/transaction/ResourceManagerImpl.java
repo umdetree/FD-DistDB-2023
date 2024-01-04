@@ -47,6 +47,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
     protected String myPath = null; // Used to distinguish this RM from other
 
     protected String dieTime;
+    protected boolean dead = false;
 
     public void setDieTime(String time) throws RemoteException {
         dieTime = time;
@@ -165,7 +166,10 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
             for (Iterator iter = xids.iterator(); iter.hasNext();) {
                 int xid = ((Integer) iter.next()).intValue();
                 System.out.println(myRMIName + " Re-enlist to TM with xid" + xid);
-                tm.enlist(xid, this);
+                if (!tm.enlist(xid, this)) {
+                    System.out.println("invalid xid " + xid + ", " + "abort");
+                    this.abort(xid);
+                }
                 if (dieTime.equals("AfterEnlist"))
                     dieNow();
                 // iter.remove();
@@ -185,7 +189,8 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
         } catch (InterruptedException e) {
             // e.printStackTrace();
         }
-        System.exit(1);
+        this.dead = true;
+        // System.exit(1);
         return true; // We won't ever get here since we exited above;
         // but we still need it to please the compiler.
     }
@@ -628,6 +633,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
             storeTransactionLogs(xids);
             System.out.println("now xids: " + xids);
         }
+        System.out.println("commited " + xid);
     }
 
     public void abort(int xid) throws InvalidTransactionException, RemoteException {
@@ -655,6 +661,7 @@ public class ResourceManagerImpl extends java.rmi.server.UnicastRemoteObject imp
             xids.remove(new Integer(xid));
             storeTransactionLogs(xids);
         }
+        System.out.println("aborted " + xid);
     }
 
     // test usage
