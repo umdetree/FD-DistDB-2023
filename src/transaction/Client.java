@@ -164,8 +164,68 @@ public class Client {
         }
         return true;
 
-    };
+    }
+    /*
+    open test: open other server
+
+     */
+    private static void openTest() throws RemoteException, InvalidTransactionException, TransactionAbortedException {
+        new Thread(new Runnable() {
+
+            public void run() {
+                TransactionManagerImpl.main(null);
+            }
+        }).start();
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        new Thread(new Runnable() {
+
+            public void run() {
+                RMManagerFlights.main(null);
+            }
+        }).start();
+        new Thread(new Runnable() {
+
+            public void run() {
+                RMManagerCars.main(null);
+            }
+        }).start();
+        new Thread(new Runnable() {
+
+            public void run() {
+                RMManagerCustomers.main(null);
+            }
+        }).start();
+        new Thread(new Runnable() {
+
+            public void run() {
+                RMManagerHotels.main(null);
+            }
+        }).start();
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        new Thread(new Runnable() {
+
+            public void run() {
+                WorkflowControllerImpl.main(null);
+            }
+        }).start();
+
+    }
     public static void main(String args[]) {
+        try {
+            openTest();
+        } catch (InvalidTransactionException | RemoteException | TransactionAbortedException e) {
+            throw new RuntimeException(e);
+        }
+
+
         Properties prop = new Properties();
         try {
             prop.load(new FileInputStream("conf/ddb.conf"));
