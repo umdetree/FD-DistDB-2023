@@ -285,8 +285,49 @@ public class Client {
         throw new RuntimeException("RoubustnessTest2 failed");
     }
 
+    /*
+     Age test: start xid
+     */
     private static boolean AgeTest(WorkflowController wc) throws RemoteException, InvalidTransactionException, TransactionAbortedException {
         int xid = wc.start();
+        return true;
+    }
+    /*
+    Deadlock test: init, start xid1, start xid2, reserve room in 1, reserve room in 2 ,commit 1, commit 2
+
+     */
+    private static boolean DeadlockTest(WorkflowController wc) throws RemoteException, InvalidTransactionException, TransactionAbortedException {
+        if (!test_initial(wc)) {
+            System.err.println("Initial failed");
+        } else {
+            System.out.println("Initial success");
+        }
+        int xid1 = wc.start();
+        int xid2 = wc.start();
+        try {
+            if (!wc.reserveRoom(xid1, "Jason", "Shanghai")) {
+                System.err.println("Reserve room failed");
+                wc.abort(xid1);
+            }
+            if (!wc.reserveRoom(xid2, "Jason", "Shanghai")) {
+                System.err.println("Reserve room failed");
+                wc.abort(xid2);
+            }
+        } catch (TransactionAbortedException e) {
+            System.out.println("TransactionAbortedException happen");
+            return true;
+        }
+        if (!wc.commit(xid1)) {
+            System.err.println("Commit failed");
+        } else {
+            System.out.println("Commit success");
+        }
+        if (!wc.commit(xid2)) {
+            System.err.println("Commit failed");
+        } else {
+            System.out.println("Commit success");
+        }
+
         return true;
     }
     public static void main(String args[]) {
@@ -321,11 +362,12 @@ public class Client {
         }
 
         try {
-            // CombineTestforReservation(wc);
+            CombineTestforReservation(wc);
             // RoubustnessTest1(wc);
             // RebornTest(wc);
             //RoubustnessTest2(wc);
             AgeTest(wc);
+            DeadlockTest(wc);
         } catch (Exception e) {
             System.err.println("Received exception:" + e);
             System.exit(1);
