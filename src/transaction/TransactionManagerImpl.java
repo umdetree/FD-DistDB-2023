@@ -302,7 +302,7 @@ public class TransactionManagerImpl
                 throw new InvalidTransactionException(xid, "No such xid " + xid);
             }
 
-            System.out.println("abort all");
+            System.out.println("abort all xid " + xid + " RMs");
             for (ResourceManager rm : data.rmList) {
                 try {
                     System.out.println("aborting " + xid + " " + rm.getID());
@@ -312,7 +312,6 @@ public class TransactionManagerImpl
                     System.out.println("abort err: " + e1);
                 }
             }
-            System.out.println("hi");
             transactionDataMap.remove(xid);
             storeState();
         }
