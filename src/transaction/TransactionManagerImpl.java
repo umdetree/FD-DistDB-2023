@@ -30,7 +30,7 @@ public class TransactionManagerImpl
         implements TransactionManager {
     // for transaction ids persistence
     protected final static String SAVE_FILE_PATH = "data/tm_txList.log";
-
+    public String dieTime = "NoDie";
 
     static Registry _rmiRegistry = null;
     private AtomicInteger transactionId = new AtomicInteger(0);
@@ -165,10 +165,13 @@ public class TransactionManagerImpl
         }
     }
 
-    public void commit(int xid) throws RemoteException, InvalidTransactionException {
-        try {
-            sleep(5000);
-        } catch (Exception e) {}
+    public void commit(int xid) throws RemoteException, InvalidTransactionException, TransactionAbortedException {
+        // try {
+        //     sleep(5000);
+        // } catch (Exception e) {}
+        if (this.dieTime.equals("BeforeCommit")) {
+            this.dieNow();
+        }
 
         TransactionData data = null;
         synchronized (transactionDataMap) {
@@ -186,7 +189,7 @@ public class TransactionManagerImpl
             try {
                 for (ResourceManager rm : data.rmList) {
                     if (!rm.prepare(xid)) {
-                        throw new InvalidTransactionException(xid, rm.getID());
+                        throw new Exception("not prepared " + xid + " " + rm.getID());
                     }
                     System.out.println("prepared " + xid + " " + rm.getID());
                 }
@@ -194,10 +197,10 @@ public class TransactionManagerImpl
                 // someone is not prepared, abort all
                 System.out.println("not prepared " + e);
                 this.abort(xid);
-                throw new InvalidTransactionException(xid, "not prepared");
+                throw new TransactionAbortedException(xid, "not prepared");
             }
         }
-        System.out.println("all prepared " + xid);
+        System.out.println("TM all prepared " + xid);
 
         // commit stage
         // at this stage, we should retry every failed commit
@@ -206,9 +209,9 @@ public class TransactionManagerImpl
                 boolean committed = false;
                 while (!committed) {
                     try {
-                        System.out.println("committing " + xid + " " + rm.getID());
+                        System.out.println("TM committing " + xid + " " + rm.getID());
                         rm.commit(xid);
-                        System.out.println("committed " + xid + " " + rm.getID());
+                        System.out.println("TM committed " + xid + " " + rm.getID());
                         committed = true;
                     } catch (Exception e) {
                         // retry
@@ -221,7 +224,10 @@ public class TransactionManagerImpl
             }
             transactionDataMap.remove(xid);
             storeState();
+        }
 
+        if (this.dieTime.equals("AfterCommit")) {
+            this.dieNow();
         }
     }
 
@@ -249,9 +255,8 @@ public class TransactionManagerImpl
     }
 
     public void setDieTime(String time) throws RemoteException{
-        // TODO not finished
+        this.dieTime = time;
         System.out.println("Not finished TM die time set to " + time);
-
     }
 
     public void abort(int xid) throws RemoteException, InvalidTransactionException {
@@ -268,7 +273,7 @@ public class TransactionManagerImpl
                     System.out.println("aborting " + xid + " " + rm.getID());
                     rm.abort(xid);
                     System.out.println("aborted " + xid + " " + rm.getID());
-                } catch (Exception e1) {
+                } catch (RemoteException e1) {
                     System.out.println("abort err: " + e1);
                 }
             }
