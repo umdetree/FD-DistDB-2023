@@ -166,9 +166,9 @@ public class TransactionManagerImpl
     }
 
     public void commit(int xid) throws RemoteException, InvalidTransactionException {
-        // try {
-        //     sleep(5000);
-        // } catch (Exception e) {}
+        try {
+            sleep(5000);
+        } catch (Exception e) {}
 
         TransactionData data = null;
         synchronized (transactionDataMap) {
@@ -193,17 +193,7 @@ public class TransactionManagerImpl
             } catch (Exception e) {
                 // someone is not prepared, abort all
                 System.out.println("not prepared " + e);
-                for (ResourceManager rm : data.rmList) {
-                    try {
-                        System.out.println("aborting " + xid + " " + rm.getID());
-                        rm.abort(xid);
-                        System.out.println("aborted " + xid + " " + rm.getID());
-                    } catch (Exception e1) {
-                        System.out.println("abort err: " + e1);
-                    }
-                }
-                System.out.println("hi");
-                transactionDataMap.remove(xid);
+                this.abort(xid);
                 throw new InvalidTransactionException(xid, "not prepared");
             }
         }
@@ -265,18 +255,26 @@ public class TransactionManagerImpl
     }
 
     public void abort(int xid) throws RemoteException, InvalidTransactionException {
-        TransactionData data = transactionDataMap.get(xid);
-        if (data == null) {
-            System.out.println("No such xid " + xid);
-            throw new InvalidTransactionException(xid, "No such xid " + xid);
-        } else {
-            for (ResourceManager rm : data.rmList) {
-                System.out.println("aborting " + xid + " " + rm.getID());
-                rm.abort(xid);
+        synchronized (transactionDataMap) {
+            TransactionData data = transactionDataMap.get(xid);
+            if (data == null) {
+                System.out.println("No such xid " + xid);
+                throw new InvalidTransactionException(xid, "No such xid " + xid);
             }
+
+            System.out.println("abort all");
+            for (ResourceManager rm : data.rmList) {
+                try {
+                    System.out.println("aborting " + xid + " " + rm.getID());
+                    rm.abort(xid);
+                    System.out.println("aborted " + xid + " " + rm.getID());
+                } catch (Exception e1) {
+                    System.out.println("abort err: " + e1);
+                }
+            }
+            System.out.println("hi");
             transactionDataMap.remove(xid);
             storeState();
         }
     }
-
 }
