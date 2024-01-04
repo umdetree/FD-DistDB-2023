@@ -230,7 +230,7 @@ public class TransactionManagerImpl
         HashMap<Integer, TransactionData> state = loadState();
         if (state != null) {
             this.transactionDataMap = state;
-            int maxKey = -1;
+            int maxKey = 0;
 
             for (int key : state.keySet()) {
                 if (key > maxKey) {
