@@ -8,13 +8,15 @@
 
 # 运行
 
-到src/transaction目录下运行
+我们在环境`Java 17/18`下开发
+
+到`src/transaction`目录下运行
 
 ```
 make all
 ```
 
-然后用
+然后启动各项服务:
 ```
 make runregistry
 make runtm
@@ -25,12 +27,9 @@ make runrmcustomers
 make runwc
 ```
 
-启动各项服务
 
-最后用
+最后运行用户代码
 
 ```
 make runclient
 ```
-
-运行用户代码
