@@ -17,6 +17,7 @@ import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.atomic.*;
 
@@ -34,7 +35,7 @@ public class TransactionManagerImpl
     public String dieTime = "NoDie";
 
     static Registry _rmiRegistry = null;
-    static int MAXAGE = 100;
+    static int MAXAGE = 10;
     private AtomicInteger transactionId = new AtomicInteger(0);
 
     class TransactionData implements Serializable {
@@ -229,24 +230,40 @@ public class TransactionManagerImpl
 
         // commit stage
         // at this stage, we should retry every failed commit
+        ArrayList<Thread> threads = new ArrayList<Thread>();
         synchronized (transactionDataMap) {
-            for (ResourceManager rm : data.rmList) {
-                boolean committed = false;
-                while (!committed) {
-                    try {
-                        System.out.println("TM committing " + xid + " " + rm.getID());
-                        rm.commit(xid);
-                        System.out.println("TM committed " + xid + " " + rm.getID());
-                        committed = true;
-                    } catch (Exception e) {
-                        // retry
-                        try {
-                            sleep(500);
-                        } catch (Exception e1) {
+            for (final ResourceManager rm : data.rmList) {
+                Thread thread = new Thread(new Runnable() {
+                    public void run() {
+                        boolean committed = false;
+                        while (!committed) {
+                            try {
+                                System.out.println("TM committing " + xid + " " + rm.getID());
+                                rm.commit(xid);
+                                System.out.println("TM committed " + xid + " " + rm.getID());
+                                committed = true;
+                            } catch (Exception e) {
+                                // retry
+                                try {
+                                    sleep(500);
+                                } catch (Exception e1) {
+                                }
+                            }
                         }
                     }
-                }
+                });
+                thread.start();
+                threads.add(thread);
             }
+        }
+        for (Thread thread : threads) {
+            try {
+                thread.join();
+            } catch (Exception e) {
+            }
+        }
+
+        synchronized (transactionDataMap) {
             transactionDataMap.remove(xid);
             storeState();
         }
