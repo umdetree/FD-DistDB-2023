@@ -6,6 +6,31 @@
 
 业务逻辑
 
-## Transaction Manager
+# 运行
 
-重启TM之后必须重启WC，否则WC看不见重启后的TM
+到src/transaction目录下运行
+
+```
+make all
+```
+
+然后用
+```
+make runregistry
+make runtm
+make runrmflights
+make runrmcars
+make runrmrooms
+make runrmcustomers
+make runwc
+```
+
+启动各项服务
+
+最后用
+
+```
+make runclient
+```
+
+运行用户代码
